@@ -157,7 +157,7 @@ export default function App() {
                   <a key={kind + item.id} className="chip" href={item.url} target="_blank" rel="noreferrer"
                     style={{ background: KINDS[kind].color }}
                     title={`${KINDS[kind].label}: ${item.repo}#${item.number} ${item.title}`}>
-                    #{item.number} {item.title}
+                    {item.repo.split('/')[1]}#{item.number} {item.title}
                   </a>
                 ))}
               </div>
