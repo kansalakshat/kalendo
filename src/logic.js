@@ -1,9 +1,9 @@
 export const USER = 'kansalakshat'
 
 export const KINDS = {
-  'issue-opened': { label: 'Issue opened', color: '#1a7f37' },
+  'issue-opened': { label: 'Issue opened', color: '#0969da' },
   'issue-closed': { label: 'Issue closed', color: '#8250df' },
-  'pr-opened': { label: 'PR opened', color: '#0969da' },
+  'pr-opened': { label: 'PR opened', color: '#1a7f37' },
   'pr-merged': { label: 'PR merged', color: '#bf3989' },
   'pr-closed': { label: 'PR closed (not merged)', color: '#cf222e' },
 }
