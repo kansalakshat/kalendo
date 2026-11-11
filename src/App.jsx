@@ -148,11 +148,11 @@ export default function App() {
         </div>
         <div className="grid">
           {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d) => <div key={d} className="dow">{d}</div>)}
-          {grid.map((d) => {
+          {grid.filter((d) => d.getMonth() === cursor.m).map((d) => {
             const k = dayKey(d)
-            if (d.getMonth() !== cursor.m) return <div key={k} className="cell other" />
             return (
-              <div key={k} className={`cell${d.getMonth() !== cursor.m ? ' other' : ''}${k === today ? ' today' : ''}`}>
+              <div key={k} className={`cell${k === today ? ' today' : ''}`}
+                style={d.getDate() === 1 ? { gridColumnStart: d.getDay() + 1 } : undefined}>
                 <span className="date">{d.getDate()}</span>
                 {(events[k] || []).map(({ kind, item }) => (
                   <a key={kind + item.id} className="chip" href={item.url} target="_blank" rel="noreferrer"
