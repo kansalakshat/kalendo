@@ -6,6 +6,7 @@ export const KINDS = {
   'pr-opened': { label: 'PR opened', color: '#1a7f37' },
   'pr-merged': { label: 'PR merged', color: '#bf3989' },
   'pr-closed': { label: 'PR closed (not merged)', color: '#cf222e' },
+  assigned: { label: 'Assigned (merged/closed)', color: '#9a6700' },
 }
 
 const pad = (n) => String(n).padStart(2, '0')
@@ -32,12 +33,12 @@ export const toItem = (x) => ({
   merged: x.pull_request?.merged_at || null,
 })
 
-// One "opened" event per item, plus one closing event (merged wins over closed).
+// One "opened" event per item (recolored 'assigned' once merged/closed), plus one closing event (merged wins over closed).
 export function buildEvents(items) {
   const byDay = {}
   const add = (date, kind, item) => (byDay[dayKey(date)] ||= []).push({ kind, item })
   for (const it of items) {
-    add(it.created, `${it.type}-opened`, it)
+    add(it.created, it.merged || it.closed ? 'assigned' : `${it.type}-opened`, it)
     if (it.merged) add(it.merged, 'pr-merged', it)
     else if (it.closed) add(it.closed, `${it.type}-closed`, it)
   }

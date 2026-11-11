@@ -16,7 +16,7 @@ const issue = toItem(raw({ state: 'open', closed_at: null }))
 
 const ev = buildEvents([pr, closedPr, issue])
 const all = Object.values(ev).flat().map((e) => e.kind).sort()
-assert.deepEqual(all, ['issue-opened', 'pr-closed', 'pr-merged', 'pr-opened', 'pr-opened'])
+assert.deepEqual(all, ['assigned', 'assigned', 'issue-opened', 'pr-closed', 'pr-merged'])
 assert.equal(ev[dayKey('2026-11-05T10:00:00Z')].length, 2)
 
 const g = monthGrid(2026, 10) // Nov 2026 starts on Sunday
