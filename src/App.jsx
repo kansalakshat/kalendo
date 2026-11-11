@@ -150,6 +150,7 @@ export default function App() {
           {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d) => <div key={d} className="dow">{d}</div>)}
           {grid.map((d) => {
             const k = dayKey(d)
+            if (d.getMonth() !== cursor.m) return <div key={k} className="cell other" />
             return (
               <div key={k} className={`cell${d.getMonth() !== cursor.m ? ' other' : ''}${k === today ? ' today' : ''}`}>
                 <span className="date">{d.getDate()}</span>
