@@ -140,15 +140,6 @@ export default function App() {
         </ul>
       </section>
 
-      <section className="stats">
-        <div><b>{items.filter((i) => i.type === 'issue').length}</b> issues</div>
-        <div><b>{prs.length}</b> PRs</div>
-        <div><b>{merged.length}</b> merged</div>
-        <div><b>{prs.length ? Math.round((merged.length / prs.length) * 100) : 0}%</b> merge rate</div>
-        <div><b>{avgMerge}</b> avg days to merge</div>
-        <div><b>{Object.values(meta).filter((m) => m.discord === 'waiting').length}</b> waiting on Discord</div>
-      </section>
-
       <div className="filters">
         <select value={filter.type} onChange={f('type')}>
           <option value="all">All types</option><option value="issue">Issues</option><option value="pr">PRs</option>
@@ -191,6 +182,15 @@ export default function App() {
             )
           })}
         </div>
+      </section>
+
+      <section className="stats">
+        <div><b>{items.filter((i) => i.type === 'issue').length}</b> issues</div>
+        <div><b>{prs.length}</b> PRs</div>
+        <div><b>{merged.length}</b> merged</div>
+        <div><b>{prs.length ? Math.round((merged.length / prs.length) * 100) : 0}%</b> merge rate</div>
+        <div><b>{avgMerge}</b> avg days to merge</div>
+        <div><b>{Object.values(meta).filter((m) => m.discord === 'waiting').length}</b> waiting on Discord</div>
       </section>
 
       <section>
