@@ -18,7 +18,7 @@ header { display: flex; flex-wrap: wrap; gap: 8px; justify-content: space-betwee
 .legend { display: flex; flex-wrap: wrap; gap: 14px; margin-bottom: 12px; }
 .legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
 
-.open-bar { position: sticky; top: 0; z-index: 2; max-height: 40vh; overflow: auto; }
+.open-bar { max-height: 40vh; overflow: auto; }
 .open-bar ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
 .open-bar li { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; border-left: 4px solid; padding: 4px 8px; background: #f6f8fa; border-radius: 4px; }
 .open-bar li a { flex: 1; min-width: 200px; }
