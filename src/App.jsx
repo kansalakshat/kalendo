@@ -167,23 +167,27 @@ export default function App() {
         </div>
       </section>
 
-      <section className="open-bar">
-        <h2>Still open ({open.length})</h2>
-        {open.length === 0 && <p className="muted">Nothing open.</p>}
-        <ul>
-          {open.map((i) => {
-            const age = daysBetween(i.created)
-            return (
-              <li key={i.id} style={{ borderLeftColor: KINDS[`${i.type}-opened`].color }}>
-                <span className="tag">{i.type === 'pr' ? 'PR' : 'Issue'}</span>
-                <a href={i.url} target="_blank" rel="noreferrer">{i.repo}#{i.number} {i.title}</a>
-                <span className={age >= STALE_DAYS ? 'age stale' : 'age'}>{age}d open</span>
-                <DiscordSelect id={i.id} meta={meta} setMeta={setMeta} />
-              </li>
-            )
-          })}
-        </ul>
-      </section>
+      {[['pr', 'Open PRs'], ['issue', 'Open issues']].map(([type, heading]) => {
+        const list = open.filter((i) => i.type === type)
+        return (
+          <section key={type} className="open-bar">
+            <h2>{heading} ({list.length})</h2>
+            {list.length === 0 && <p className="muted">Nothing open.</p>}
+            <ul>
+              {list.map((i) => {
+                const age = daysBetween(i.created)
+                return (
+                  <li key={i.id} style={{ borderLeftColor: KINDS[`${i.type}-opened`].color }}>
+                    <a href={i.url} target="_blank" rel="noreferrer">{i.repo}#{i.number} {i.title}</a>
+                    <span className={age >= STALE_DAYS ? 'age stale' : 'age'}>{age}d open</span>
+                    <DiscordSelect id={i.id} meta={meta} setMeta={setMeta} />
+                  </li>
+                )
+              })}
+            </ul>
+          </section>
+        )
+      })}
 
       <section className="stats">
         <div><b>{items.filter((i) => i.type === 'issue').length}</b> issues</div>
