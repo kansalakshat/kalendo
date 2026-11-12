@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { KINDS, USER, buildEvents, dayKey, daysBetween, monthGrid, toItem } from './logic.js'
 
 const STALE_DAYS = 14
@@ -46,6 +46,9 @@ export default function App() {
   const [error, setError] = useState('')
   const [cursor, setCursor] = useState(() => { const d = new Date(); return { y: d.getFullYear(), m: d.getMonth() } })
   const [filter, setFilter] = useState({ type: 'all', state: 'all', repo: 'all', discord: 'all' })
+  const [day, setDay] = useState(null)
+  const dialog = useRef(null)
+  useEffect(() => { if (day) dialog.current.showModal() }, [day])
 
   const setMeta = (m) => { setMetaState(m); save('kalendo-meta', m) }
 
@@ -151,11 +154,12 @@ export default function App() {
           {grid.filter((d) => d.getMonth() === cursor.m).map((d) => {
             const k = dayKey(d)
             return (
-              <div key={k} className={`cell${k === today ? ' today' : ''}`}
+              <div key={k} className={`cell${k === today ? ' today' : ''}`} onClick={() => setDay(k)}
                 style={d.getDate() === 1 ? { gridColumnStart: d.getDay() + 1 } : undefined}>
-                <span className="date">{d.getDate()}</span>
+                <button className="date" aria-label={`Details for ${d.toDateString()}`}>{d.getDate()}</button>
                 {(events[k] || []).map(({ kind, item }) => (
                   <a key={kind + item.id} className="chip" href={item.url} target="_blank" rel="noreferrer"
+                    onClick={(e) => e.stopPropagation()}
                     style={{ background: KINDS[kind].color }}
                     title={`${KINDS[kind].label}: ${item.repo}#${item.number} ${item.title}`}>
                     {item.repo.split('/')[1]}#{item.number} {item.title}
@@ -166,6 +170,32 @@ export default function App() {
           })}
         </div>
       </section>
+
+      <dialog ref={dialog} className="day" onClose={() => setDay(null)}
+        onClick={(e) => e.target === e.currentTarget && e.currentTarget.close()}>
+        {day && (
+          <div>
+            <div className="day-head">
+              <h2>{new Date(`${day}T00:00`).toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</h2>
+              <button onClick={() => dialog.current.close()} aria-label="Close">✕</button>
+            </div>
+            {!events[day] && <p className="muted">Nothing on this day.</p>}
+            <ul>
+              {(events[day] || []).map(({ kind, item }) => (
+                <li key={kind + item.id} style={{ borderLeftColor: KINDS[kind].color }}>
+                  <b style={{ color: KINDS[kind].color }}>{KINDS[kind].label}</b>
+                  <a href={item.url} target="_blank" rel="noreferrer">{item.repo}#{item.number} {item.title}</a>
+                  <span className="muted">
+                    Opened {dayKey(item.created)} · {item.merged ? `merged ${dayKey(item.merged)}` : item.closed ? `closed ${dayKey(item.closed)}` : `open ${daysBetween(item.created)}d`}
+                  </span>
+                  <DiscordSelect id={item.id} meta={meta} setMeta={setMeta} />
+                  {meta[item.id]?.note && <span>📝 {meta[item.id].note}</span>}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </dialog>
 
       {[['pr', 'Open PRs'], ['issue', 'Open issues']].map(([type, heading]) => {
         const list = open.filter((i) => i.type === type)
