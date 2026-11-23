@@ -11,11 +11,11 @@ const save = (k, v) => {
   try { localStorage.setItem(k, JSON.stringify(v)) } catch { /* storage full/blocked */ }
 }
 
-async function search(kind) {
+async function search(q) {
   const out = []
   for (let page = 1; page <= 10; page++) { // search API caps at 1000 results
     const r = await fetch(
-      `https://api.github.com/search/issues?q=author:${USER}+is:${kind}&per_page=100&page=${page}`,
+      `https://api.github.com/search/issues?q=author:${USER}+${q}&per_page=100&page=${page}`,
       { headers: { Accept: 'application/vnd.github+json' }, signal: AbortSignal.timeout(15000) })
     if (!r.ok) {
       const msg = (await r.json().catch(() => ({}))).message || r.statusText
@@ -46,17 +46,25 @@ export default function App() {
   const [error, setError] = useState('')
   const [cursor, setCursor] = useState(() => { const d = new Date(); return { y: d.getFullYear(), m: d.getMonth() } })
   const [filter, setFilter] = useState({ type: 'all', state: 'all', repo: 'all', discord: 'all' })
+  const [hidden, setHiddenState] = useState(() => load('kalendo-hidden-repos', []))
   const [day, setDay] = useState(null)
   const dialog = useRef(null)
   useEffect(() => { if (day) dialog.current.showModal() }, [day])
 
   const setMeta = (m) => { setMetaState(m); save('kalendo-meta', m) }
+  const toggleRepo = (r) => {
+    const h = hidden.includes(r) ? hidden.filter((x) => x !== r) : [...hidden, r]
+    setHiddenState(h); save('kalendo-hidden-repos', h)
+  }
 
   async function refresh() {
     setLoading(true); setError('')
     try {
-      const [issues, prs] = await Promise.all([search('issue'), search('pr')])
-      const next = [...issues, ...prs].map(toItem).sort((a, b) => b.created.localeCompare(a.created))
+      const [issues, prs, approved] = await Promise.all([
+        search('is:issue'), search('is:pr'), search('is:pr+is:open+review:approved')])
+      const ok = new Set(approved.map((x) => x.html_url))
+      const next = [...issues, ...prs].map((x) => ({ ...toItem(x), approved: ok.has(x.html_url) }))
+        .sort((a, b) => b.created.localeCompare(a.created))
       const now = new Date().toISOString()
       setItems(next); setFetchedAt(now)
       save('kalendo-items', next); save('kalendo-fetched', now)
@@ -68,16 +76,18 @@ export default function App() {
   }
   useEffect(() => { refresh() }, [])
 
-  const repos = useMemo(() => [...new Set(items.map((i) => i.repo))].sort(), [items])
-  const shown = items.filter((i) =>
+  const allRepos = useMemo(() => [...new Set(items.map((i) => i.repo))].sort(), [items])
+  const visible = items.filter((i) => !hidden.includes(i.repo))
+  const repos = allRepos.filter((r) => !hidden.includes(r))
+  const shown = visible.filter((i) =>
     (filter.type === 'all' || i.type === filter.type) &&
     (filter.state === 'all' || i.state === filter.state) &&
     (filter.repo === 'all' || i.repo === filter.repo) &&
     (filter.discord === 'all' || (meta[i.id]?.discord || '') === filter.discord))
   const events = buildEvents(shown)
-  const open = items.filter((i) => i.state === 'open')
+  const open = visible.filter((i) => i.state === 'open')
 
-  const prs = items.filter((i) => i.type === 'pr')
+  const prs = visible.filter((i) => i.type === 'pr')
   const merged = prs.filter((i) => i.merged)
   const avgMerge = merged.length
     ? (merged.reduce((s, i) => s + daysBetween(i.created, i.merged), 0) / merged.length).toFixed(1) : '-'
@@ -140,6 +150,14 @@ export default function App() {
           <option value="all">Any Discord status</option>
           {Object.entries(DISCORD).map(([k, label]) => <option key={k} value={k}>{label}</option>)}
         </select>
+        <details className="repo-pick">
+          <summary>Repos counted ({repos.length}/{allRepos.length})</summary>
+          <div>
+            {allRepos.map((r) => (
+              <label key={r}><input type="checkbox" checked={!hidden.includes(r)} onChange={() => toggleRepo(r)} />{r}</label>
+            ))}
+          </div>
+        </details>
       </div>
 
       <section className="calendar">
@@ -188,6 +206,7 @@ export default function App() {
                   <span className="muted">
                     Opened {dayKey(item.created)} · {item.merged ? `merged ${dayKey(item.merged)}` : item.closed ? `closed ${dayKey(item.closed)}` : `open ${daysBetween(item.created)}d`}
                   </span>
+                  {item.approved && !item.merged && <span className="approved">✓ Approved, not merged</span>}
                   <DiscordSelect id={item.id} meta={meta} setMeta={setMeta} />
                   {meta[item.id]?.note && <span>📝 {meta[item.id].note}</span>}
                 </li>
@@ -197,10 +216,11 @@ export default function App() {
         )}
       </dialog>
 
-      {[['pr', 'Open PRs'], ['issue', 'Open issues']].map(([type, heading]) => {
-        const list = open.filter((i) => i.type === type)
+      {[['Open PRs', (i) => i.type === 'pr'], ['Approved by maintainer, not merged', (i) => i.approved],
+        ['Open issues', (i) => i.type === 'issue']].map(([heading, pick]) => {
+        const list = open.filter(pick)
         return (
-          <section key={type} className="open-bar">
+          <section key={heading} className="open-bar">
             <h2>{heading} ({list.length})</h2>
             {list.length === 0 && <p className="muted">Nothing open.</p>}
             <ul>
@@ -209,6 +229,7 @@ export default function App() {
                 return (
                   <li key={i.id} style={{ borderLeftColor: KINDS[`${i.type}-opened`].color }}>
                     <a href={i.url} target="_blank" rel="noreferrer">{i.repo}#{i.number} {i.title}</a>
+                    {i.approved && <span className="approved">✓ Approved</span>}
                     <span className={age >= STALE_DAYS ? 'age stale' : 'age'}>{age}d open</span>
                     <DiscordSelect id={i.id} meta={meta} setMeta={setMeta} />
                   </li>
@@ -220,7 +241,7 @@ export default function App() {
       })}
 
       <section className="stats">
-        <div><b>{items.filter((i) => i.type === 'issue').length}</b> issues</div>
+        <div><b>{visible.filter((i) => i.type === 'issue').length}</b> issues</div>
         <div><b>{prs.length}</b> PRs</div>
         <div><b>{merged.length}</b> merged</div>
         <div><b>{prs.length ? Math.round((merged.length / prs.length) * 100) : 0}%</b> merge rate</div>
