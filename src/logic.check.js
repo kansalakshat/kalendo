@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { buildEvents, dayKey, monthGrid, toItem } from './logic.js'
+import { approvedAt, buildEvents, dayKey, monthGrid, toItem } from './logic.js'
 
 const raw = (o) => ({
   html_url: 'https://github.com/a/b/pull/1', title: 't', number: 1,
@@ -23,5 +23,12 @@ const g = monthGrid(2026, 10) // Nov 2026 starts on Sunday
 assert.equal(g.length, 42)
 assert.equal(dayKey(g[0]), '2026-11-01')
 assert.equal(dayKey(monthGrid(2026, 11)[0]), '2026-11-29') // Dec 1 is Tuesday
+
+assert.equal(approvedAt([
+  { state: 'APPROVED', submitted_at: '2026-11-10T00:00:00Z' },
+  { state: 'APPROVED', submitted_at: '2026-11-15T00:00:00Z' },
+  { state: 'COMMENTED', submitted_at: '2026-11-20T00:00:00Z' },
+]), '2026-11-15T00:00:00Z')
+assert.equal(approvedAt([{ state: 'DISMISSED', submitted_at: '2026-11-15T00:00:00Z' }]), null)
 
 console.log('logic checks passed')

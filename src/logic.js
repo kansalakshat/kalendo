@@ -33,6 +33,10 @@ export const toItem = (x) => ({
   merged: x.pull_request?.merged_at || null,
 })
 
+// Latest APPROVED review time (re-approval after changes resets the wait), or null.
+export const approvedAt = (reviews) =>
+  reviews.filter((r) => r.state === 'APPROVED').map((r) => r.submitted_at).sort().pop() || null
+
 // One "opened" event per item (recolored 'assigned' once merged/closed), plus one closing event (merged wins over closed).
 export function buildEvents(items) {
   const byDay = {}
