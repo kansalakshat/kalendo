@@ -67,15 +67,18 @@ export default function App() {
   async function refresh() {
     setLoading(true); setError('')
     try {
-      const [issues, prs, approved] = await Promise.all([
-        search('is:issue'), search('is:pr'), search('is:pr+is:open+review:approved')])
-      // One reviews call per approved PR (search API has no review dates); on failure keep the cached date.
-      const prev = Object.fromEntries(items.map((i) => [i.id, i.approvedAt]))
-      const dates = await Promise.all(approved.map((x) =>
-        reviews(x).then(approvedAt).catch(() => prev[x.html_url] || null)))
-      const ok = new Map(approved.map((x, n) => [x.html_url, dates[n]]))
-      const next = [...issues, ...prs].map((x) => ({
-        ...toItem(x), approved: ok.has(x.html_url), approvedAt: ok.get(x.html_url) || null }))
+      const [issues, prs] = await Promise.all([search('is:issue'), search('is:pr')])
+      // search's review:approved counts bot approvals (coderabbit), so read each open PR's reviews.
+      // One call per open PR; on failure keep the cached date.
+      const openPrs = prs.filter((x) => x.state === 'open')
+      const prev = Object.fromEntries(items.map((i) => [i.id, i.maintainerApprovedAt]))
+      const dates = await Promise.all(openPrs.map((x) =>
+        reviews(x).then((r) => approvedAt(r, USER)).catch(() => prev[x.html_url] || null)))
+      const ok = new Map(openPrs.map((x, n) => [x.html_url, dates[n]]))
+      const next = [...issues, ...prs].map((x) => {
+        const at = ok.get(x.html_url) || null
+        return { ...toItem(x), approved: !!at, maintainerApprovedAt: at }
+      })
         .sort((a, b) => b.created.localeCompare(a.created))
       const now = new Date().toISOString()
       setItems(next); setFetchedAt(now)
@@ -241,8 +244,8 @@ export default function App() {
                 return (
                   <li key={i.id} style={{ borderLeftColor: KINDS[`${i.type}-opened`].color }}>
                     <a href={i.url} target="_blank" rel="noreferrer">{i.repo}#{i.number} {i.title}</a>
-                    {i.approved && <span className="approved">✓ Approved{i.approvedAt &&
-                      ` ${dayKey(i.approvedAt)} · ${daysBetween(i.approvedAt)}d ago`}</span>}
+                    {i.approved && <span className="approved">✓ Approved{i.maintainerApprovedAt &&
+                      ` ${dayKey(i.maintainerApprovedAt)} · ${daysBetween(i.maintainerApprovedAt)}d ago`}</span>}
                     <span className={age >= STALE_DAYS ? 'age stale' : 'age'}>{age}d open</span>
                     <DiscordSelect id={i.id} meta={meta} setMeta={setMeta} />
                   </li>

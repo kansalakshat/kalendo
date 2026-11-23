@@ -24,11 +24,12 @@ assert.equal(g.length, 42)
 assert.equal(dayKey(g[0]), '2026-11-01')
 assert.equal(dayKey(monthGrid(2026, 11)[0]), '2026-11-29') // Dec 1 is Tuesday
 
-assert.equal(approvedAt([
-  { state: 'APPROVED', submitted_at: '2026-11-10T00:00:00Z' },
-  { state: 'APPROVED', submitted_at: '2026-11-15T00:00:00Z' },
-  { state: 'COMMENTED', submitted_at: '2026-11-20T00:00:00Z' },
-]), '2026-11-15T00:00:00Z')
-assert.equal(approvedAt([{ state: 'DISMISSED', submitted_at: '2026-11-15T00:00:00Z' }]), null)
+const rv = (login, state, day, type = 'User') => ({ user: { login, type }, state, submitted_at: `2026-11-${day}T00:00:00Z` })
+assert.equal(approvedAt([rv('coderabbitai[bot]', 'APPROVED', 10, 'Bot')], 'me'), null) // bot ignored
+assert.equal(approvedAt([rv('me', 'APPROVED', 10)], 'me'), null) // self ignored
+assert.equal(approvedAt([rv('m', 'APPROVED', 10), rv('m', 'COMMENTED', 20)], 'me'), '2026-11-10T00:00:00Z')
+assert.equal(approvedAt([rv('m', 'APPROVED', 10), rv('m', 'CHANGES_REQUESTED', 12)], 'me'), null) // retracted
+assert.equal(approvedAt([rv('m', 'APPROVED', 10), rv('m', 'DISMISSED', 12)], 'me'), null)
+assert.equal(approvedAt([rv('a', 'APPROVED', 10), rv('b', 'APPROVED', 15)], 'me'), '2026-11-15T00:00:00Z')
 
 console.log('logic checks passed')

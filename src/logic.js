@@ -33,9 +33,16 @@ export const toItem = (x) => ({
   merged: x.pull_request?.merged_at || null,
 })
 
-// Latest APPROVED review time (re-approval after changes resets the wait), or null.
-export const approvedAt = (reviews) =>
-  reviews.filter((r) => r.state === 'APPROVED').map((r) => r.submitted_at).sort().pop() || null
+// Latest maintainer approval time, or null. Humans only (bots like coderabbit don't count),
+// not the PR author, and only reviewers whose latest verdict is still APPROVED.
+export function approvedAt(reviews, author) {
+  const last = {}
+  for (const r of reviews) { // API returns reviews oldest first
+    if (!r.user || r.user.type === 'Bot' || r.user.login === author) continue
+    if (r.state === 'APPROVED' || r.state === 'CHANGES_REQUESTED' || r.state === 'DISMISSED') last[r.user.login] = r
+  }
+  return Object.values(last).filter((r) => r.state === 'APPROVED').map((r) => r.submitted_at).sort().pop() || null
+}
 
 // One "opened" event per item (recolored 'assigned' once merged/closed), plus one closing event (merged wins over closed).
 export function buildEvents(items) {
