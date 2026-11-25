@@ -297,14 +297,14 @@ export default function App() {
         </div>
         <table>
           <thead>
-            <tr><th>{groupBy === 'repo' ? 'Repo' : 'Org'}</th><th>Issues</th><th>PRs</th><th>Merged</th>
+            <tr><th>{groupBy === 'repo' ? 'Repo' : 'Org'}</th><th>Issues</th><th>PRs</th><th>Merged</th><th>Approved, waiting to merge</th>
               <th>Merge rate</th><th>Avg days to merge</th><th>Open</th></tr>
           </thead>
           <tbody>
             {breakdown(visible, groupBy === 'repo' ? (i) => i.repo : (i) => orgOf(i.repo)).map((s) => (
               <tr key={s.name}>
                 <td><a href={`https://github.com/${s.name}`} target="_blank" rel="noreferrer">{s.name}</a></td>
-                <td>{s.issues}</td><td>{s.prs}</td><td>{s.merged}</td>
+                <td>{s.issues}</td><td>{s.prs}</td><td>{s.merged}</td><td>{s.approved}</td>
                 <td>{s.prs ? Math.round((s.merged / s.prs) * 100) : 0}%</td>
                 <td>{s.merged ? (s.mergeDays / s.merged).toFixed(1) : '-'}</td>
                 <td>{s.open}</td>

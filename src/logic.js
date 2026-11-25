@@ -63,9 +63,10 @@ export function buildEvents(items) {
 export function breakdown(items, key) {
   const g = {}
   for (const i of items) {
-    const s = (g[key(i)] ||= { name: key(i), issues: 0, prs: 0, merged: 0, open: 0, mergeDays: 0 })
+    const s = (g[key(i)] ||= { name: key(i), issues: 0, prs: 0, merged: 0, approved: 0, open: 0, mergeDays: 0 })
     if (i.type === 'pr') s.prs++; else s.issues++
     if (i.state === 'open') s.open++
+    if (i.approved && !i.merged) s.approved++
     if (i.merged) { s.merged++; s.mergeDays += daysBetween(i.created, i.merged) }
   }
   const rate = (s) => (s.prs ? s.merged / s.prs : -1) // no PRs sorts below 0%
