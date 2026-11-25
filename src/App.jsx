@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { KINDS, USER, approvedAt, breakdown, buildEvents, dayKey, daysBetween, monthGrid, orgOf, toItem } from './logic.js'
+import { KINDS, USER, approvedAt, breakdown, buildEvents, dayKey, daysBetween, monthGrid, orgOf, reviewedAt, toItem } from './logic.js'
 
 const STALE_DAYS = 14
 const DISCORD = { '': 'Not asked', waiting: 'Asked, waiting', responded: 'Responded' }
@@ -75,13 +75,14 @@ export default function App() {
       // search's review:approved counts bot approvals (coderabbit), so read each open PR's reviews.
       // One call per open PR; on failure keep the cached date.
       const openPrs = prs.filter((x) => x.state === 'open')
-      const prev = Object.fromEntries(items.map((i) => [i.id, i.maintainerApprovedAt]))
+      const prev = Object.fromEntries(items.map((i) => [i.id, { at: i.maintainerApprovedAt, rev: i.maintainerReviewedAt }]))
       const dates = await Promise.all(openPrs.map((x) =>
-        reviews(x).then((r) => approvedAt(r, USER)).catch(() => prev[x.html_url] || null)))
+        reviews(x).then((r) => ({ at: approvedAt(r, USER), rev: reviewedAt(r, USER) }))
+          .catch(() => prev[x.html_url] || {})))
       const ok = new Map(openPrs.map((x, n) => [x.html_url, dates[n]]))
       const next = [...issues, ...prs].map((x) => {
-        const at = ok.get(x.html_url) || null
-        return { ...toItem(x), approved: !!at, maintainerApprovedAt: at }
+        const { at = null, rev = null } = ok.get(x.html_url) || {}
+        return { ...toItem(x), approved: !!at, maintainerApprovedAt: at, reviewed: !!rev && !at, maintainerReviewedAt: rev }
       })
         .sort((a, b) => b.created.localeCompare(a.created))
       const now = new Date().toISOString()
@@ -242,6 +243,7 @@ export default function App() {
       </dialog>
 
       {[['Open PRs', (i) => i.type === 'pr'], ['Approved by maintainer, not merged', (i) => i.approved],
+        ['Reviewed by maintainer, not approved', (i) => i.reviewed],
         ['Open issues', (i) => i.type === 'issue']].map(([heading, pick]) => {
         const list = open.filter(pick)
         return (
@@ -256,6 +258,7 @@ export default function App() {
                     <a href={i.url} target="_blank" rel="noreferrer">{i.repo}#{i.number} {i.title}</a>
                     {i.approved && <span className="approved">✓ Approved{i.maintainerApprovedAt &&
                       ` ${dayKey(i.maintainerApprovedAt)} · ${daysBetween(i.maintainerApprovedAt)}d ago`}</span>}
+                    {i.reviewed && <span className="reviewed">Reviewed {dayKey(i.maintainerReviewedAt)} · {daysBetween(i.maintainerReviewedAt)}d ago</span>}
                     <span className={age >= STALE_DAYS ? 'age stale' : 'age'}>{age}d open</span>
                     <DiscordSelect id={i.id} meta={meta} setMeta={setMeta} />
                   </li>
@@ -297,14 +300,14 @@ export default function App() {
         </div>
         <table>
           <thead>
-            <tr><th>{groupBy === 'repo' ? 'Repo' : 'Org'}</th><th>Issues</th><th>PRs</th><th>Approved, waiting to merge</th><th>Merged</th>
+            <tr><th>{groupBy === 'repo' ? 'Repo' : 'Org'}</th><th>Issues</th><th>PRs</th><th>Reviewed, not approved</th><th>Approved, waiting to merge</th><th>Merged</th>
               <th>Merge rate</th><th>Avg days to merge</th><th>Open</th></tr>
           </thead>
           <tbody>
             {breakdown(visible, groupBy === 'repo' ? (i) => i.repo : (i) => orgOf(i.repo)).map((s) => (
               <tr key={s.name}>
                 <td><a href={`https://github.com/${s.name}`} target="_blank" rel="noreferrer">{s.name}</a></td>
-                <td>{s.issues}</td><td>{s.prs}</td><td>{s.approved}</td><td>{s.merged}</td>
+                <td>{s.issues}</td><td>{s.prs}</td><td>{s.reviewed}</td><td>{s.approved}</td><td>{s.merged}</td>
                 <td>{s.prs ? Math.round((s.merged / s.prs) * 100) : 0}%</td>
                 <td>{s.merged ? (s.mergeDays / s.merged).toFixed(1) : '-'}</td>
                 <td>{s.open}</td>

@@ -68,3 +68,4 @@ section:has(table) { overflow-x: auto; }
 .analysis-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
 .analysis-head h2 { margin: 0 8px 0 0; }
 .analysis-head button[aria-pressed="true"] { background: #0969da; border-color: #0969da; color: #fff; }
+.reviewed { font-size: 12px; font-weight: 600; color: #9a6700; background: #fff8c5; border-radius: 10px; padding: 1px 8px; }

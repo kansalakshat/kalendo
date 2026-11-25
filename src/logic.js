@@ -47,6 +47,12 @@ export function approvedAt(reviews, author) {
   return Object.values(last).filter((r) => r.state === 'APPROVED').map((r) => r.submitted_at).sort().pop() || null
 }
 
+// Latest human, non-author review of any verdict (comment, changes requested, approve), or null.
+export function reviewedAt(reviews, author) {
+  return reviews.filter((r) => r.user && r.user.type !== 'Bot' && r.user.login !== author && r.state !== 'PENDING')
+    .map((r) => r.submitted_at).sort().pop() || null
+}
+
 // One "opened" event per item (recolored 'assigned' once merged/closed), plus one closing event (merged wins over closed).
 export function buildEvents(items) {
   const byDay = {}
@@ -63,10 +69,11 @@ export function buildEvents(items) {
 export function breakdown(items, key) {
   const g = {}
   for (const i of items) {
-    const s = (g[key(i)] ||= { name: key(i), issues: 0, prs: 0, merged: 0, approved: 0, open: 0, mergeDays: 0 })
+    const s = (g[key(i)] ||= { name: key(i), issues: 0, prs: 0, merged: 0, reviewed: 0, approved: 0, open: 0, mergeDays: 0 })
     if (i.type === 'pr') s.prs++; else s.issues++
     if (i.state === 'open') s.open++
     if (i.approved && !i.merged) s.approved++
+    if (i.reviewed && !i.merged) s.reviewed++
     if (i.merged) { s.merged++; s.mergeDays += daysBetween(i.created, i.merged) }
   }
   const rate = (s) => (s.prs ? s.merged / s.prs : -1) // no PRs sorts below 0%

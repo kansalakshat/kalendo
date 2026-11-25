@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { approvedAt, breakdown, buildEvents, dayKey, monthGrid, toItem } from './logic.js'
+import { approvedAt, breakdown, buildEvents, dayKey, monthGrid, reviewedAt, toItem } from './logic.js'
 
 const raw = (o) => ({
   html_url: 'https://github.com/a/b/pull/1', title: 't', number: 1,
@@ -35,7 +35,7 @@ assert.equal(approvedAt([rv('a', 'APPROVED', 10), rv('b', 'APPROVED', 15)], 'me'
 const other = { ...issue, id: 'x', repo: 'c/d' }
 const byRepo = breakdown([pr, closedPr, issue, other], (i) => i.repo)
 assert.deepEqual(byRepo.map((s) => s.name), ['a/b', 'c/d'])
-assert.deepEqual(byRepo[0], { name: 'a/b', issues: 1, prs: 2, merged: 1, approved: 0, open: 1, mergeDays: 3 })
+assert.deepEqual(byRepo[0], { name: 'a/b', issues: 1, prs: 2, merged: 1, reviewed: 0, approved: 0, open: 1, mergeDays: 3 })
 const byOrg = breakdown([pr, other, { ...other, repo: 'c/e' }], (i) => i.repo.split('/')[0])
 assert.deepEqual(byOrg.map((s) => [s.name, s.issues + s.prs]), [['a', 1], ['c', 2]]) // 100% before no-PR org
 const zero = { ...closedPr, id: 'z', repo: 'e/f' } // 0% merge rate still above no-PR repo
@@ -43,5 +43,9 @@ assert.deepEqual(breakdown([other, zero, pr], (i) => i.repo).map((s) => s.name),
 
 const waiting = { ...closedPr, id: 'w', state: 'open', closed: null, approved: true }
 assert.equal(breakdown([waiting, { ...pr, approved: true }], (i) => i.repo)[0].approved, 1) // merged doesn't count
+
+assert.equal(reviewedAt([rv('bot[bot]', 'COMMENTED', 10, 'Bot'), rv('me', 'COMMENTED', 11)], 'me'), null) // bots + self ignored
+assert.equal(reviewedAt([rv('m', 'CHANGES_REQUESTED', 10), rv('m', 'COMMENTED', 12), rv('x', 'PENDING', 14)], 'me'), '2026-11-12T00:00:00Z')
+assert.equal(breakdown([{ ...waiting, approved: false, reviewed: true }], (i) => i.repo)[0].reviewed, 1)
 
 console.log('logic checks passed')
