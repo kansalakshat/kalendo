@@ -17,6 +17,9 @@ export const dayKey = (d) => {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 }
 
+// "owner/name" -> "owner"
+export const orgOf = (repo) => repo.split('/')[0]
+
 export const daysBetween = (a, b = new Date()) =>
   Math.floor((new Date(b) - new Date(a)) / 86400000)
 

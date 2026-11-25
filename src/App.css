@@ -65,3 +65,6 @@ section:has(table) { overflow-x: auto; }
 .repo-pick > div { position: absolute; z-index: 10; top: calc(100% + 4px); left: 0; display: grid; gap: 4px; padding: 8px; max-height: 50vh; overflow: auto; background: #fff; border: 1px solid #d0d7de; border-radius: 6px; box-shadow: 0 4px 12px rgba(31, 35, 40, .15); }
 .repo-pick label { display: flex; gap: 6px; align-items: center; white-space: nowrap; cursor: pointer; }
 .repo-pick label input { width: auto; }
+.analysis-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.analysis-head h2 { margin: 0 8px 0 0; }
+.analysis-head button[aria-pressed="true"] { background: #0969da; border-color: #0969da; color: #fff; }

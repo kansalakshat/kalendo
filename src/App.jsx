@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { KINDS, USER, approvedAt, breakdown, buildEvents, dayKey, daysBetween, monthGrid, toItem } from './logic.js'
+import { KINDS, USER, approvedAt, breakdown, buildEvents, dayKey, daysBetween, monthGrid, orgOf, toItem } from './logic.js'
 
 const STALE_DAYS = 14
 const DISCORD = { '': 'Not asked', waiting: 'Asked, waiting', responded: 'Responded' }
@@ -52,7 +52,7 @@ export default function App() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [cursor, setCursor] = useState(() => { const d = new Date(); return { y: d.getFullYear(), m: d.getMonth() } })
-  const [filter, setFilter] = useState({ type: 'all', state: 'all', repo: 'all', discord: 'all' })
+  const [filter, setFilter] = useState({ type: 'all', state: 'all', org: 'all', repo: 'all', discord: 'all' })
   const [hidden, setHiddenState] = useState(() => load('kalendo-hidden-repos', []))
   const [day, setDay] = useState(null)
   const [groupBy, setGroupBy] = useState('repo')
@@ -63,7 +63,9 @@ export default function App() {
   const toggleRepo = (r) => {
     const h = hidden.includes(r) ? hidden.filter((x) => x !== r) : [...hidden, r]
     setHiddenState(h); save('kalendo-hidden-repos', h)
-    if (h.includes(filter.repo)) setFilter({ ...filter, repo: 'all' }) // hidden repo can't stay selected
+    // Hidden repo (or an org with every repo hidden) can't stay selected.
+    const orgGone = filter.org !== 'all' && !allRepos.some((x) => !h.includes(x) && orgOf(x) === filter.org)
+    if (h.includes(filter.repo) || orgGone) setFilter({ ...filter, repo: 'all', ...(orgGone && { org: 'all' }) })
   }
 
   async function refresh() {
@@ -94,9 +96,11 @@ export default function App() {
   useEffect(() => { refresh() }, [])
 
   const allRepos = useMemo(() => [...new Set(items.map((i) => i.repo))].sort(), [items])
-  // Repo filter scopes the whole page; the other filters only narrow calendar + table.
-  const visible = items.filter((i) => !hidden.includes(i.repo) && (filter.repo === 'all' || i.repo === filter.repo))
-  const repos = allRepos.filter((r) => !hidden.includes(r))
+  // Org and repo filters scope the whole page; the other filters only narrow calendar + table.
+  const counted = allRepos.filter((r) => !hidden.includes(r))
+  const orgs = [...new Set(counted.map(orgOf))].sort((a, b) => a.localeCompare(b))
+  const repos = counted.filter((r) => filter.org === 'all' || orgOf(r) === filter.org)
+  const visible = items.filter((i) => repos.includes(i.repo) && (filter.repo === 'all' || i.repo === filter.repo))
   const shown = visible.filter((i) =>
     (filter.type === 'all' || i.type === filter.type) &&
     (filter.state === 'all' || i.state === filter.state) &&
@@ -159,6 +163,10 @@ export default function App() {
         <select value={filter.state} onChange={f('state')}>
           <option value="all">Any state</option><option value="open">Open</option><option value="closed">Closed</option>
         </select>
+        <select value={filter.org} onChange={(e) => setFilter({ ...filter, org: e.target.value, repo: 'all' })}>
+          <option value="all">All orgs</option>
+          {orgs.map((o) => <option key={o}>{o}</option>)}
+        </select>
         <select value={filter.repo} onChange={f('repo')}>
           <option value="all">All repos</option>
           {repos.map((r) => <option key={r}>{r}</option>)}
@@ -168,7 +176,7 @@ export default function App() {
           {Object.entries(DISCORD).map(([k, label]) => <option key={k} value={k}>{label}</option>)}
         </select>
         <details className="repo-pick">
-          <summary>Repos counted ({repos.length}/{allRepos.length})</summary>
+          <summary>Repos counted ({counted.length}/{allRepos.length})</summary>
           <div>
             {allRepos.map((r) => (
               <label key={r}><input type="checkbox" checked={!hidden.includes(r)} onChange={() => toggleRepo(r)} />{r}</label>
@@ -268,11 +276,11 @@ export default function App() {
       </section>
 
       <section>
-        <div className="day-head">
+        <div className="analysis-head">
           <h2>Analysis</h2>
-          <select value={groupBy} onChange={(e) => setGroupBy(e.target.value)} aria-label="Group analysis by">
-            <option value="repo">By repo</option><option value="org">By org</option>
-          </select>
+          {[['repo', 'By repo'], ['org', 'By org']].map(([k, label]) => (
+            <button key={k} aria-pressed={groupBy === k} onClick={() => setGroupBy(k)}>{label}</button>
+          ))}
         </div>
         <table>
           <thead>
@@ -280,7 +288,7 @@ export default function App() {
               <th>Merge rate</th><th>Avg days to merge</th><th>Open</th></tr>
           </thead>
           <tbody>
-            {breakdown(visible, groupBy === 'repo' ? (i) => i.repo : (i) => i.repo.split('/')[0]).map((s) => (
+            {breakdown(visible, groupBy === 'repo' ? (i) => i.repo : (i) => orgOf(i.repo)).map((s) => (
               <tr key={s.name}>
                 <td><a href={`https://github.com/${s.name}`} target="_blank" rel="noreferrer">{s.name}</a></td>
                 <td>{s.issues}</td><td>{s.prs}</td><td>{s.merged}</td>
