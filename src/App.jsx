@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { KINDS, USER, approvedAt, buildEvents, dayKey, daysBetween, monthGrid, toItem } from './logic.js'
+import { KINDS, USER, approvedAt, breakdown, buildEvents, dayKey, daysBetween, monthGrid, toItem } from './logic.js'
 
 const STALE_DAYS = 14
 const DISCORD = { '': 'Not asked', waiting: 'Asked, waiting', responded: 'Responded' }
@@ -55,6 +55,7 @@ export default function App() {
   const [filter, setFilter] = useState({ type: 'all', state: 'all', repo: 'all', discord: 'all' })
   const [hidden, setHiddenState] = useState(() => load('kalendo-hidden-repos', []))
   const [day, setDay] = useState(null)
+  const [groupBy, setGroupBy] = useState('repo')
   const dialog = useRef(null)
   useEffect(() => { if (day) dialog.current.showModal() }, [day])
 
@@ -263,6 +264,32 @@ export default function App() {
         <div><b>{prs.length ? Math.round((merged.length / prs.length) * 100) : 0}%</b> merge rate</div>
         <div><b>{avgMerge}</b> avg days to merge</div>
         <div><b>{Object.values(meta).filter((m) => m.discord === 'waiting').length}</b> waiting on Discord</div>
+      </section>
+
+      <section>
+        <div className="day-head">
+          <h2>Analysis</h2>
+          <select value={groupBy} onChange={(e) => setGroupBy(e.target.value)} aria-label="Group analysis by">
+            <option value="repo">By repo</option><option value="org">By org</option>
+          </select>
+        </div>
+        <table>
+          <thead>
+            <tr><th>{groupBy === 'repo' ? 'Repo' : 'Org'}</th><th>Issues</th><th>PRs</th><th>Merged</th>
+              <th>Merge rate</th><th>Avg days to merge</th><th>Open</th></tr>
+          </thead>
+          <tbody>
+            {breakdown(visible, groupBy === 'repo' ? (i) => i.repo : (i) => i.repo.split('/')[0]).map((s) => (
+              <tr key={s.name}>
+                <td><a href={`https://github.com/${s.name}`} target="_blank" rel="noreferrer">{s.name}</a></td>
+                <td>{s.issues}</td><td>{s.prs}</td><td>{s.merged}</td>
+                <td>{s.prs ? Math.round((s.merged / s.prs) * 100) : 0}%</td>
+                <td>{s.merged ? (s.mergeDays / s.merged).toFixed(1) : '-'}</td>
+                <td>{s.open}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </section>
 
       <section>

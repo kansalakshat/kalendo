@@ -56,6 +56,18 @@ export function buildEvents(items) {
   return byDay
 }
 
+// Stats per group (repo or org), busiest first. key(item) names the group.
+export function breakdown(items, key) {
+  const g = {}
+  for (const i of items) {
+    const s = (g[key(i)] ||= { name: key(i), issues: 0, prs: 0, merged: 0, open: 0, mergeDays: 0 })
+    if (i.type === 'pr') s.prs++; else s.issues++
+    if (i.state === 'open') s.open++
+    if (i.merged) { s.merged++; s.mergeDays += daysBetween(i.created, i.merged) }
+  }
+  return Object.values(g).sort((a, b) => b.prs + b.issues - a.prs - a.issues || a.name.localeCompare(b.name))
+}
+
 // 42 cells (6 weeks), Sunday first.
 export function monthGrid(year, month) {
   const start = new Date(year, month, 1 - new Date(year, month, 1).getDay())
