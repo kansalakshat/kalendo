@@ -266,6 +266,19 @@ export default function App() {
         )
       })}
 
+      <section className="open-bar">
+        <h2>Merged PRs ({merged.length})</h2>
+        {merged.length === 0 && <p className="muted">Nothing merged yet.</p>}
+        <ul>
+          {[...merged].sort((a, b) => b.merged.localeCompare(a.merged)).map((i) => (
+            <li key={i.id} style={{ borderLeftColor: KINDS['pr-merged'].color }}>
+              <a href={i.url} target="_blank" rel="noreferrer">{i.repo}#{i.number} {i.title}</a>
+              <span className="age">merged {dayKey(i.merged)} · took {daysBetween(i.created, i.merged)}d</span>
+            </li>
+          ))}
+        </ul>
+      </section>
+
       <section className="stats">
         <div><b>{visible.filter((i) => i.type === 'issue').length}</b> issues</div>
         <div><b>{prs.length}</b> PRs</div>
