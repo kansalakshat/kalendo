@@ -56,7 +56,7 @@ export function buildEvents(items) {
   return byDay
 }
 
-// Stats per group (repo or org), busiest first. key(item) names the group.
+// Stats per group (repo or org), highest merge rate first, then most PRs. key(item) names the group.
 export function breakdown(items, key) {
   const g = {}
   for (const i of items) {
@@ -65,7 +65,8 @@ export function breakdown(items, key) {
     if (i.state === 'open') s.open++
     if (i.merged) { s.merged++; s.mergeDays += daysBetween(i.created, i.merged) }
   }
-  return Object.values(g).sort((a, b) => b.prs + b.issues - a.prs - a.issues || a.name.localeCompare(b.name))
+  const rate = (s) => (s.prs ? s.merged / s.prs : -1) // no PRs sorts below 0%
+  return Object.values(g).sort((a, b) => rate(b) - rate(a) || b.prs - a.prs || a.name.localeCompare(b.name))
 }
 
 // 42 cells (6 weeks), Sunday first.

@@ -37,6 +37,8 @@ const byRepo = breakdown([pr, closedPr, issue, other], (i) => i.repo)
 assert.deepEqual(byRepo.map((s) => s.name), ['a/b', 'c/d'])
 assert.deepEqual(byRepo[0], { name: 'a/b', issues: 1, prs: 2, merged: 1, open: 1, mergeDays: 3 })
 const byOrg = breakdown([pr, other, { ...other, repo: 'c/e' }], (i) => i.repo.split('/')[0])
-assert.deepEqual(byOrg.map((s) => [s.name, s.issues + s.prs]), [['c', 2], ['a', 1]])
+assert.deepEqual(byOrg.map((s) => [s.name, s.issues + s.prs]), [['a', 1], ['c', 2]]) // 100% before no-PR org
+const zero = { ...closedPr, id: 'z', repo: 'e/f' } // 0% merge rate still above no-PR repo
+assert.deepEqual(breakdown([other, zero, pr], (i) => i.repo).map((s) => s.name), ['a/b', 'e/f', 'c/d'])
 
 console.log('logic checks passed')

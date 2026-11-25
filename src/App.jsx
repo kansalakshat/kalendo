@@ -63,6 +63,7 @@ export default function App() {
   const toggleRepo = (r) => {
     const h = hidden.includes(r) ? hidden.filter((x) => x !== r) : [...hidden, r]
     setHiddenState(h); save('kalendo-hidden-repos', h)
+    if (h.includes(filter.repo)) setFilter({ ...filter, repo: 'all' }) // hidden repo can't stay selected
   }
 
   async function refresh() {
@@ -93,12 +94,12 @@ export default function App() {
   useEffect(() => { refresh() }, [])
 
   const allRepos = useMemo(() => [...new Set(items.map((i) => i.repo))].sort(), [items])
-  const visible = items.filter((i) => !hidden.includes(i.repo))
+  // Repo filter scopes the whole page; the other filters only narrow calendar + table.
+  const visible = items.filter((i) => !hidden.includes(i.repo) && (filter.repo === 'all' || i.repo === filter.repo))
   const repos = allRepos.filter((r) => !hidden.includes(r))
   const shown = visible.filter((i) =>
     (filter.type === 'all' || i.type === filter.type) &&
     (filter.state === 'all' || i.state === filter.state) &&
-    (filter.repo === 'all' || i.repo === filter.repo) &&
     (filter.discord === 'all' || (meta[i.id]?.discord || '') === filter.discord))
   const events = buildEvents(shown)
   const open = visible.filter((i) => i.state === 'open')
@@ -263,7 +264,7 @@ export default function App() {
         <div><b>{merged.length}</b> merged</div>
         <div><b>{prs.length ? Math.round((merged.length / prs.length) * 100) : 0}%</b> merge rate</div>
         <div><b>{avgMerge}</b> avg days to merge</div>
-        <div><b>{Object.values(meta).filter((m) => m.discord === 'waiting').length}</b> waiting on Discord</div>
+        <div><b>{visible.filter((i) => meta[i.id]?.discord === 'waiting').length}</b> waiting on Discord</div>
       </section>
 
       <section>
